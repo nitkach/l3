@@ -1,24 +1,49 @@
-use super::{error::AppError, Repository};
-use crate::model::Event;
+use super::Repository;
+use crate::{
+    error::AppError,
+    model::{Event, Subscription},
+};
 use anyhow::Result;
-use axum::{debug_handler, extract::State, response::IntoResponse, Json};
-use std::sync::Arc;
+use axum::{
+    debug_handler,
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+use log::info;
+use serde_json::json;
 
 #[debug_handler]
 pub(crate) async fn create_event(
-    State(state): State<Repository>,
+    State(mut state): State<Repository>,
     Json(event): Json<Event>,
 ) -> Result<impl IntoResponse, AppError> {
-    
+    let ulid = state.add_event(&event).await?;
+    info!("Added event with ulid: {ulid}");
+
+    state.notify_subscribers(&event).await?;
+    info!("Subscribers notified");
+
+    Ok(StatusCode::OK)
+}
+
+#[debug_handler]
+pub(crate) async fn subscribe(
+    State(mut state): State<Repository>,
+    Json(subscription): Json<Subscription>,
+) -> Result<impl IntoResponse, AppError> {
+    state.add_subscription(&subscription).await?;
     Ok(())
 }
 
 #[debug_handler]
-pub(crate) async fn subscribe() -> Result<impl IntoResponse, AppError> {
-    Ok(())
-}
+pub(crate) async fn get_user_events(
+    State(mut state): State<Repository>,
+    Path(user_id): Path<u64>,
+) -> Result<impl IntoResponse, AppError> {
+    let events = state.get_user_events(user_id).await?;
 
-#[debug_handler]
-pub(crate) async fn get_user_events() -> Result<impl IntoResponse, AppError> {
-    Ok(())
+    let json = json!({"user_id":user_id,"events":events,});
+    Ok(Json(json))
 }

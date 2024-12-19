@@ -1,0 +1,34 @@
+services:
+  web-app:
+    image: web-app
+
+    build: .
+
+    env_file: .env
+
+    # environment:
+    #   HOST: ${HOST}
+    #   PORT: ${PORT}
+    #   REDIS_HOST: ${REDIS_HOST}
+    #   REDIS_PORT: ${REDIS_PORT}
+
+    ports: [3000:3000]
+
+    depends_on:
+      [redis]
+    networks:
+      [redis]
+
+  redis:
+    image: redis/redis-stack-server:7.4.0-v1
+
+    networks:
+      [redis]
+
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+
+
+networks:
+  redis:

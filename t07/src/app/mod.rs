@@ -5,7 +5,6 @@ use axum::{
 };
 use routes::{create_event, get_user_events, subscribe};
 
-mod error;
 mod routes;
 
 pub(crate) fn initialize_router(shared_state: Repository) -> Router {

@@ -4,5 +4,5 @@ name    = "t09"
 version = "0.1.0"
 
 [dependencies]
-anyhow    = { workspace = true }
-itertools = { workspace = true }
+anyhow    = { version = "1.0" }
+itertools = { version = "0.13" }
