@@ -1,0 +1,20 @@
+[package]
+edition = "2021"
+name    = "t01"
+version = "0.1.0"
+
+[dependencies]
+anyhow            = { version = "1.0" }
+axum              = { version = "0.7", features = ["macros"] }
+bcrypt            = { version = "0.16" }
+chrono            = { version = "0.4" }
+deadpool-postgres = { version = "0.14" }
+dotenvy           = { version = "0.15" }
+http              = { version = "1.2" }
+jsonwebtoken      = { version = "9.3.0" }
+serde             = { version = "1.0", features = ["serde_derive"] }
+serde_json        = { version = "1.0" }
+thiserror         = { version = "2.0.8" }
+tokio             = { version = "1", features = ["full"] }
+tokio-postgres    = { version = "0.7" }
+ulid              = { version = "1.1.3", features = ["postgres", "serde"] }

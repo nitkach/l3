@@ -11,7 +11,7 @@ async fn main() -> ExitCode {
         warn!(".env file: {err}");
     }
 
-    let addresses = match get_address() {
+    let addresses = match get_addresses() {
         Ok(address) => address,
         Err(err) => {
             eprintln!("{err:?}");
@@ -27,7 +27,7 @@ async fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn get_address() -> Result<Addresses> {
+fn get_addresses() -> Result<Addresses> {
     let app = (
         std::env::var("HOST")?.parse::<Ipv4Addr>()?,
         std::env::var("PORT")?.parse::<u16>()?,

@@ -1,9 +1,9 @@
-### Task Description
+## Task Description
 
 Create a command line interpreter (shell) that supports basic commands such as `cd`, `ls`, `echo`, `pwd`, and also allows running external programs.
 The interpreter should support input/output redirection and pipelines between commands.
 
-#### Requirements
+## Requirements
 
 - Support for basic commands: `cd`, `ls`, `echo`, `pwd`,
 
