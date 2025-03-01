@@ -26,3 +26,4 @@ Use the `axum` framework to create the API and the asynchronous capabilities of 
 - `POST /events`: receiving new events
 - `POST /subscribe`: user subscription to an event
 - `GET /events/{user_id}`: getting events that the user is subscribed to
+

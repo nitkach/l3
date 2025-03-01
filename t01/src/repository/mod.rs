@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex};
-
 use anyhow::Result;
 use bcrypt::DEFAULT_COST;
+use log::info;
+use refinery::embed_migrations;
+use std::sync::{Arc, Mutex};
 use tokio_postgres::Row;
 use ulid::{Generator, Ulid};
 
@@ -10,86 +11,30 @@ use crate::model::{Claims, CreatePostRequest, LoginRequest, RegisterRequest};
 #[derive(Clone)]
 pub(crate) struct Repository {
     pool: deadpool_postgres::Pool,
-    ulid: Arc<Mutex<Generator>>,
 }
 
-#[derive(Debug)]
-pub(crate) struct DatabaseUser {
-    pub(crate) id: Ulid,
-    pub(crate) login: String,
-    pub(crate) password_hash: String,
-}
-
-impl TryFrom<Row> for DatabaseUser {
-    type Error = anyhow::Error;
-
-    fn try_from(row: Row) -> Result<Self> {
-        Ok(Self {
-            id: row.try_get("id")?,
-            login: row.try_get("login")?,
-            password_hash: row.try_get("password_hash")?,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct DatabasePost {
-    pub(crate) id: Ulid,
-    pub(crate) user_id: Ulid,
-    pub(crate) content: String,
-    pub(crate) likes: u32,
-}
-
-impl TryFrom<Row> for DatabasePost {
-    type Error = anyhow::Error;
-
-    fn try_from(row: Row) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            id: row.try_get("id")?,
-            user_id: row.try_get("user_id")?,
-            content: row.try_get("content")?,
-            likes: row.try_get("likes")?,
-        })
-    }
-}
+embed_migrations!("migrations");
 
 impl Repository {
-    pub(crate) async fn initialize() -> Result<Self> {
-        let mut config = deadpool_postgres::Config::new();
-
-        config.host = Some(std::env::var("DB_HOST")?);
-        config.port = Some(std::env::var("DB_PORT")?.parse::<u16>()?);
-        config.user = Some(std::env::var("DB_USER")?);
-        config.password = Some(std::env::var("DB_USER_PASSWORD")?);
-        config.dbname = Some(std::env::var("DB_NAME")?);
-
+    pub(crate) async fn initialize(config: deadpool_postgres::Config) -> Result<Self> {
+        info!("Initializing repository");
+        info!("Trying to connect to database...");
         let pool = config.create_pool(
             Some(deadpool_postgres::Runtime::Tokio1),
             tokio_postgres::NoTls,
         )?;
+        info!("Connection successfull");
 
+        info!("Applying database migrations...");
+        let mut connection = pool.get().await?;
+        let migration_report = migrations::runner().run_async(&mut **connection).await?;
+        info!("Migrations applied successfully: {:?}", migration_report);
+
+        info!("Initializing ulid generator...");
         let ulid = Arc::new(Mutex::new(ulid::Generator::new()));
+        info!("Ulid generator initializing successful!");
 
-        pool.get()
-            .await?
-            .batch_execute(
-                "
-                create table if not exists users (
-                               id uuid primary key,
-                            login text      unique not null,
-                    password_hash text             not null
-                );
-                create table if not exists posts (
-                         id   uuid primary key,
-                    user_id   uuid references users (id) on delete cascade,
-                    content   text not null,
-                      likes serial not null
-                );
-                ",
-            )
-            .await?;
-
-        Ok(Self { pool, ulid })
+        Ok(Self { pool })
     }
 
     pub(crate) async fn register_user(&self, user_data: RegisterRequest) -> Result<Ulid> {
@@ -190,5 +135,45 @@ impl Repository {
         let rows_updated = conn.execute(query, &[&post_id]).await?;
 
         Ok(rows_updated == 1)
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct DatabaseUser {
+    pub(crate) id: Ulid,
+    pub(crate) login: String,
+    pub(crate) password_hash: String,
+}
+
+impl TryFrom<Row> for DatabaseUser {
+    type Error = anyhow::Error;
+
+    fn try_from(row: Row) -> Result<Self> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            login: row.try_get("login")?,
+            password_hash: row.try_get("password_hash")?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct DatabasePost {
+    pub(crate) id: Ulid,
+    pub(crate) user_id: Ulid,
+    pub(crate) content: String,
+    pub(crate) likes: u32,
+}
+
+impl TryFrom<Row> for DatabasePost {
+    type Error = anyhow::Error;
+
+    fn try_from(row: Row) -> std::result::Result<Self, Self::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            user_id: row.try_get("user_id")?,
+            content: row.try_get("content")?,
+            likes: row.try_get("likes")?,
+        })
     }
 }

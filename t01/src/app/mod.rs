@@ -1,6 +1,7 @@
-use crate::repository;
+use crate::{repository, Config};
 use anyhow::Result;
 use axum::Router;
+use log::info;
 use std::net::Ipv4Addr;
 use tokio::net::TcpListener;
 
@@ -12,12 +13,18 @@ pub(crate) struct App {
 }
 
 impl App {
-    pub(crate) async fn initialize() -> Result<Self> {
-        let listener = Self::bind_listener().await?;
+    pub(crate) async fn initialize(config: Config) -> Result<Self> {
+        let listener = TcpListener::bind(config.address).await?;
+        info!(
+            "TcpListener bind succesfull: {}:{}",
+            config.address.0, config.address.1
+        );
 
-        let shared_state = repository::Repository::initialize().await?;
+        let shared_state = repository::Repository::initialize(config.database_config).await?;
+        info!("Repository initialized");
 
         let router = routes::initialize_router(shared_state);
+        info!("Router initialized");
 
         Ok(Self { listener, router })
     }
@@ -26,15 +33,5 @@ impl App {
         axum::serve(self.listener, self.router).await?;
 
         Ok(())
-    }
-
-    async fn bind_listener() -> Result<TcpListener> {
-        let addr = {
-            let host = std::env::var("HOST")?.parse::<Ipv4Addr>()?;
-            let port = std::env::var("PORT")?.parse::<u16>()?;
-            (host, port)
-        };
-        let listener = TcpListener::bind(addr).await?;
-        Ok(listener)
     }
 }
