@@ -1,12 +1,14 @@
 use anyhow::Result;
-use bcrypt::DEFAULT_COST;
 use log::info;
 use refinery::embed_migrations;
-use std::sync::{Arc, Mutex};
 use tokio_postgres::Row;
-use ulid::{Generator, Ulid};
+use ulid::Ulid;
 
-use crate::model::{Claims, CreatePostRequest, LoginRequest, RegisterRequest};
+use crate::{
+    error::AppError,
+    model::{Claims, CreatePostRequest, LoginRequest},
+    utils::PasswordHash,
+};
 
 #[derive(Clone)]
 pub(crate) struct Repository {
@@ -30,51 +32,65 @@ impl Repository {
         let migration_report = migrations::runner().run_async(&mut **connection).await?;
         info!("Migrations applied successfully: {:?}", migration_report);
 
-        info!("Initializing ulid generator...");
-        let ulid = Arc::new(Mutex::new(ulid::Generator::new()));
-        info!("Ulid generator initializing successful!");
-
         Ok(Self { pool })
     }
 
-    pub(crate) async fn register_user(&self, user_data: RegisterRequest) -> Result<Ulid> {
-        let ulid = {
-            let mut generator = self.ulid.lock().unwrap();
-            loop {
-                if let Ok(ulid) = generator.generate() {
-                    break ulid;
-                }
-                std::thread::yield_now();
-            }
-        };
+    pub(crate) async fn register_user(
+        &self,
+        username: &str,
+        password_hash: PasswordHash,
+    ) -> Result<i32, AppError> {
+        let mut connection = self.pool.get().await?;
 
-        let conn = self.pool.get().await?;
+        let transaction = connection.transaction().await?;
 
-        let RegisterRequest { login, password } = user_data;
-        let password_hash = bcrypt::hash(password, DEFAULT_COST)?;
+        let check_query = "
+            select user_id
+            from users
+            where username = $1;
+        ";
+        let existing_user = transaction.query_opt(check_query, &[&username]).await?;
 
-        let query = "insert into users (id, login, password_hash) values ($1, $2, $3);";
-        conn.execute(query, &[&ulid.to_string(), &login, &password_hash])
+        if existing_user.is_some() {
+            return Err(AppError::user_already_exist());
+        }
+
+        let query = "
+            insert into users (username, password_hash)
+            values ($1, $2)
+            returning user_id;
+        ";
+        let row = transaction
+            .query_one(query, &[&username, &password_hash.as_str()])
             .await?;
 
-        Ok(ulid)
+        let user_id: i32 = row.try_get(0)?;
+
+        transaction.commit().await?;
+
+        Ok(user_id)
     }
 
-    pub(crate) async fn login_user(
+    pub(crate) async fn get_login_credentials(
         &self,
-        user_data: &LoginRequest,
+        username: &str,
     ) -> Result<Option<DatabaseUser>> {
-        let conn = self.pool.get().await?;
+        let mut connection = self.pool.get().await?;
 
-        let query = "select id from users where login = $1 and password = $2;";
-        let Some(row) = conn
-            .query_opt(query, &[&user_data.login, &user_data.password])
-            .await?
-        else {
+        let transaction = connection.transaction().await?;
+
+        let query = "
+            select (user_id, username, password_hash, created_at)
+            from users
+            where username = $1;
+        ";
+        let Some(row) = transaction.query_opt(query, &[&username]).await? else {
             return Ok(None);
         };
 
         let user = DatabaseUser::try_from(row)?;
+
+        transaction.commit().await?;
 
         Ok(Some(user))
     }
@@ -84,65 +100,60 @@ impl Repository {
         post: CreatePostRequest,
         claims: Claims,
     ) -> Result<Ulid> {
-        let ulid = {
-            let mut generator = self.ulid.lock().unwrap();
-            loop {
-                if let Ok(ulid) = generator.generate() {
-                    break ulid;
-                }
-                std::thread::yield_now();
-            }
-        };
+        // let conn = self.pool.get().await?;
 
-        let conn = self.pool.get().await?;
+        // let query = "insert into posts (id, user_id, content, likes) values ($1, $2, $3, $4);";
+        // conn.execute(
+        //     query,
+        //     &[&ulid.to_string(), &claims.sub, &post.content, &"0"],
+        // )
+        // .await?;
 
-        let query = "insert into posts (id, user_id, content, likes) values ($1, $2, $3, $4);";
-        conn.execute(
-            query,
-            &[&ulid.to_string(), &claims.sub, &post.content, &"0"],
-        )
-        .await?;
-
-        Ok(ulid)
+        // Ok(ulid)
+        todo!()
     }
 
     pub(crate) async fn get_post(&self, ulid: Ulid) -> Result<Option<DatabasePost>> {
-        let conn = self.pool.get().await?;
+        // let conn = self.pool.get().await?;
 
-        let query = "select id, user_id, content, likes from posts where id = $1;";
-        let Some(row) = conn.query_opt(query, &[&ulid.to_string()]).await? else {
-            return Ok(None);
-        };
+        // let query = "select id, user_id, content, likes from posts where id = $1;";
+        // let Some(row) = conn.query_opt(query, &[&ulid.to_string()]).await? else {
+        //     return Ok(None);
+        // };
 
-        let post = DatabasePost::try_from(row)?;
+        // let post = DatabasePost::try_from(row)?;
 
-        Ok(Some(post))
+        // Ok(Some(post))
+        todo!()
     }
 
     pub(crate) async fn delete_post(&self, post_id: Ulid, claims: Claims) -> Result<bool> {
-        let conn = self.pool.get().await?;
+        // let conn = self.pool.get().await?;
 
-        let query = "delete from posts where id = $1 and user_id = $2;";
-        let rows_deleted = conn.execute(query, &[&post_id, &claims.sub]).await?;
+        // let query = "delete from posts where id = $1 and user_id = $2;";
+        // let rows_deleted = conn.execute(query, &[&post_id, &claims.sub]).await?;
 
-        Ok(rows_deleted == 1)
+        // Ok(rows_deleted == 1)
+        todo!()
     }
 
     pub(crate) async fn like_post(&self, post_id: Ulid) -> Result<bool> {
-        let conn = self.pool.get().await?;
+        // let conn = self.pool.get().await?;
 
-        let query = "update posts set likes = likes + 1 where id = $1;";
-        let rows_updated = conn.execute(query, &[&post_id]).await?;
+        // let query = "update posts set likes = likes + 1 where id = $1;";
+        // let rows_updated = conn.execute(query, &[&post_id]).await?;
 
-        Ok(rows_updated == 1)
+        // Ok(rows_updated == 1)
+        todo!()
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct DatabaseUser {
-    pub(crate) id: Ulid,
-    pub(crate) login: String,
-    pub(crate) password_hash: String,
+    pub(crate) user_id: i32,
+    pub(crate) username: String,
+    pub(crate) password_hash: PasswordHash,
+    pub(crate) created_at: chrono::NaiveDateTime,
 }
 
 impl TryFrom<Row> for DatabaseUser {
@@ -150,9 +161,10 @@ impl TryFrom<Row> for DatabaseUser {
 
     fn try_from(row: Row) -> Result<Self> {
         Ok(Self {
-            id: row.try_get("id")?,
-            login: row.try_get("login")?,
-            password_hash: row.try_get("password_hash")?,
+            user_id: row.try_get("user_id")?,
+            username: row.try_get("username")?,
+            password_hash: PasswordHash::try_from(&row)?,
+            created_at: row.try_get("created_at")?,
         })
     }
 }

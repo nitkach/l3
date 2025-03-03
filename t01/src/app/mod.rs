@@ -2,7 +2,6 @@ use crate::{repository, Config};
 use anyhow::Result;
 use axum::Router;
 use log::info;
-use std::net::Ipv4Addr;
 use tokio::net::TcpListener;
 
 mod routes;

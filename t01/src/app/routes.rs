@@ -1,19 +1,26 @@
 use crate::{
     error::AppError,
-    model::{Claims, CreatePostRequest, LoginRequest, RegisterRequest},
+    model::{Claims, CreatePostRequest, LoginRequest, RegisterForm},
     repository::Repository,
+    utils::PasswordHash,
 };
+use askama::Template;
 use auth::validate_jwt;
-use axum::{extract::Path, Extension};
+use axum::{
+    extract::Path,
+    response::{Html, Redirect},
+    routing::delete,
+    Extension, Form,
+};
 use axum::{
     extract::State,
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
-use bcrypt::verify;
 use http::StatusCode;
 use serde_json::json;
+use tower_http::services::ServeDir;
 use ulid::Ulid;
 
 mod auth;
@@ -27,34 +34,74 @@ mod auth;
 - `POST /posts/{post_id}/likes`: like a post.
 */
 pub(crate) fn initialize_router(state: Repository) -> Router {
+    let router = Router::new()
+        .route("/", get(get_index_page))
+        .route("/register", get(get_register_page).post(register_user))
+        .route("/login", get(get_login_page).post(login))
+        .route("/posts", get(get_posts))
+        .route("/posts/{post_id}", get(get_post));
+
     let secure_router = Router::new()
         .route("/posts", post(create_post))
-        .route("/posts/:post_id", get(get_post).delete(delete_post))
-        .route("/posts/:post_id/likes", post(like_post))
+        .route("/posts/{post_id}", delete(delete_post))
+        .route("/posts/{post_id}/likes", post(like_post))
         .layer(axum::middleware::from_fn(validate_jwt));
-
-    let router = Router::new()
-        .route("/register", post(register_user))
-        .route("/login", post(login));
 
     Router::new()
         .merge(router)
         .merge(secure_router)
+        .nest_service("/static", ServeDir::new("templates"))
         .with_state(state)
+}
+
+#[derive(Debug, Template)]
+#[template(path = "index.askama.html")]
+struct IndexTemplate {}
+
+#[axum::debug_handler]
+async fn get_index_page(State(pool): State<Repository>) -> Result<impl IntoResponse, AppError> {
+    let html = IndexTemplate {};
+
+    Ok(askama_axum::into_response(&html))
+}
+
+#[derive(Debug, Template)]
+#[template(path = "register.askama.html")]
+struct RegisterTemplate {}
+
+#[axum::debug_handler]
+async fn get_register_page(State(pool): State<Repository>) -> Result<impl IntoResponse, AppError> {
+    let html = RegisterTemplate {};
+
+    Ok(askama_axum::into_response(&html))
+}
+
+#[derive(Debug, Template)]
+#[template(path = "login.askama.html")]
+struct LoginTemplate {}
+
+#[axum::debug_handler]
+async fn get_login_page(State(pool): State<Repository>) -> Result<impl IntoResponse, AppError> {
+    let html = LoginTemplate {};
+
+    Ok(askama_axum::into_response(&html))
 }
 
 #[axum::debug_handler]
 async fn register_user(
     State(pool): State<Repository>,
-    Json(register_req): Json<RegisterRequest>,
+    Json(payload): Json<RegisterForm>,
 ) -> Result<impl IntoResponse, AppError> {
-    if register_req.is_empty() {
-        return Err(AppError::Authenthication("Missing credentials".to_owned()));
+    if payload.is_empty() {
+        return Err(AppError::authenthication("Missing credentials".to_owned()));
     }
 
-    pool.register_user(register_req).await?;
+    let RegisterForm { username, password } = payload;
+    let password_hash = PasswordHash::from_password(&password)?;
 
-    Ok(StatusCode::CREATED)
+    pool.register_user(&username, password_hash).await?;
+
+    Ok(Json(json!({ "message": "Registration successful" })))
 }
 
 async fn login(
@@ -62,19 +109,21 @@ async fn login(
     Json(login_req): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     if login_req.is_empty() {
-        return Err(AppError::Authenthication("Missing credentials".to_owned()));
+        return Err(AppError::authenthication("Missing credentials".to_owned()));
     }
 
-    let Some(user) = pool.login_user(&login_req).await? else {
-        return Err(AppError::NotFound("User does not exists".to_owned()));
+    let LoginRequest { username, password } = login_req;
+
+    let Some(user) = pool.get_login_credentials(&username).await? else {
+        return Err(AppError::not_found("User does not exists"));
     };
 
-    if !verify(login_req.password, &user.password_hash).map_err(anyhow::Error::from)? {
-        return Err(AppError::Authenthication("Wrong credentials".to_owned()));
-    };
+    if !user.password_hash.verify_password(&password)? {
+        return Err(AppError::authenthication("Wrong credentials".to_owned()));
+    }
 
-    let token = auth::create_access_token(user.id)?;
-    let user_id = user.id;
+    let user_id = user.user_id;
+    let token = auth::create_access_token(user_id)?;
 
     let json = json!({
         "token": token,
@@ -101,7 +150,26 @@ async fn get_post(
     Path(post_id): Path<Ulid>,
 ) -> Result<impl IntoResponse, AppError> {
     let Some(post) = pool.get_post(post_id).await? else {
-        return Err(AppError::NotFound("Post does not exists".to_owned()));
+        return Err(AppError::not_found("Post does not exists"));
+    };
+
+    let json = json!({
+        "id": post.id,
+        "user_id": post.user_id,
+        "content": post.content,
+        "likes": post.likes,
+    });
+
+    Ok(Json(json))
+}
+
+async fn get_posts(
+    State(pool): State<Repository>,
+    Extension(_): Extension<Claims>,
+    Path(post_id): Path<Ulid>,
+) -> Result<impl IntoResponse, AppError> {
+    let Some(post) = pool.get_post(post_id).await? else {
+        return Err(AppError::not_found("Post does not exists"));
     };
 
     let json = json!({
@@ -122,7 +190,7 @@ async fn delete_post(
     if pool.delete_post(post_id, claims).await? {
         Ok(StatusCode::NO_CONTENT)
     } else {
-        Err(AppError::NotFound("Post does not exists".to_owned()))
+        Err(AppError::not_found("Post does not exists"))
     }
 }
 
@@ -134,6 +202,6 @@ async fn like_post(
     if pool.like_post(post_id).await? {
         Ok(StatusCode::NO_CONTENT)
     } else {
-        Err(AppError::NotFound("Post does not exists".to_owned()))
+        Err(AppError::not_found("Post does not exists"))
     }
 }

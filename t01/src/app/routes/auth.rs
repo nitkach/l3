@@ -36,8 +36,8 @@ pub(crate) async fn validate_jwt(mut req: Request, next: Next) -> Result<Respons
             jwt_token.replace("Bearer ", "")
         }
         None => {
-            return Err(AppError::Authenthication(
-                "Authorization token is missing".to_owned(),
+            return Err(AppError::authenthication(
+                "Authenthication token is missing".to_owned(),
             ));
         }
     };
@@ -53,11 +53,11 @@ pub(crate) async fn validate_jwt(mut req: Request, next: Next) -> Result<Respons
             req.extensions_mut().insert(token_payload.claims);
             Ok(next.run(req).await)
         }
-        Err(err) => Err(AppError::JwtToken(err)),
+        Err(err) => Err(AppError::jwt_token(err)),
     }
 }
 
-pub(crate) fn create_access_token(user_id: Ulid) -> Result<String, AppError> {
+pub(crate) fn create_access_token(user_id: i32) -> Result<String, AppError> {
     let expires = usize::try_from(
         chrono::Utc::now()
             .checked_add_days(chrono::Days::new(1))

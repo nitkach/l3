@@ -1,0 +1,37 @@
+services:
+  t01:
+    image: t01
+
+    build: .
+
+    env_file: .env
+
+    ports:
+    - "3000:3000"
+
+    networks:
+      - postgres
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:17
+
+    volumes:
+      - t01:/var/lib/postgresql/data
+
+    environment:
+      POSTGRES_DB: ${PGDATABASE}
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+
+    networks:
+      - postgres
+
+    ports:
+      - "5432:5432"
+volumes:
+  t01:
+
+networks:
+  postgres:

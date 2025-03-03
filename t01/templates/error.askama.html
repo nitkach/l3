@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Error</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .error {
+            text-align: center;
+
+            margin: 20px;
+            padding: 20px;
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 4px;
+            color: #c62828;
+        }
+
+        h1 {
+            font-size: 50px;
+        }
+
+        p {
+            font-size: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topnav">
+        <div class="left-links">
+            <a href="/">Home</a>
+            <a href="/posts">Posts</a>
+        </div>
+
+        <div class="right-links">
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+        </div>
+    </div>
+
+    <div class="error">
+        <h1>
+            {{ self.code }}
+        </h1>
+        <p>
+            {{ self.message }}
+        </p>
+    </div>
+</body>
+
+</html>

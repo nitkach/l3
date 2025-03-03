@@ -1,13 +1,12 @@
-use std::net::Ipv4Addr;
-
 use anyhow::Result;
 use log::info;
-use url::Url;
+use std::net::Ipv4Addr;
 
 mod app;
 mod error;
 mod model;
 mod repository;
+mod utils;
 
 pub async fn run() -> Result<()> {
     let config = Config::new()?;
