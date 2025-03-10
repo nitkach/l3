@@ -15,10 +15,6 @@ impl PasswordHash {
     pub(crate) fn as_str(&self) -> &str {
         &self.0
     }
-
-    pub(crate) fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
 }
 
 impl TryFrom<&tokio_postgres::Row> for PasswordHash {

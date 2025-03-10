@@ -4,163 +4,39 @@
 <head>
     <meta charset="utf-8">
     <title>Register</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <style>
-        * {
-            box-sizing: border-box
-        }
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/register.css">
+    <script src="/static/scripts/register.js"></script>
+    <script src="/static/scripts/script.js"></script>
 
-        .register-form-container {
-            font-size: 14px;
-            background-color: #fff;
-            margin: 50px auto;
-            max-width: 400px;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .register-form-container h1,
-        p {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        .register-form-container label {
-            color: #424242;
-        }
-
-        input[type=text],
-        input[type=password] {
-            width: 100%;
-            padding: 10px;
-
-            margin: 5px 0 20px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-
-            display: inline-block;
-            background: #f1f1f1;
-        }
-
-        input[type=text]:focus,
-        input[type=password]:focus {
-            background-color: #ddd;
-            outline: none;
-        }
-
-        hr {
-            border: 1px solid #f1f1f1;
-            margin-bottom: 25px;
-        }
-
-        .register-form-container input[type="submit"] {
-            background-color: #ab00ce;
-            border-radius: 4px;
-            font-size: 16px;
-            color: white;
-            padding: 10px;
-            margin: 8px 0;
-            border: none;
-            cursor: pointer;
-            width: 100%;
-            opacity: 0.9;
-        }
-
-        .register-form-container input[type="submit"]:hover {
-            opacity: 1;
-        }
-
-        .success-message {
-            background-color: #25cb03;
-            opacity: 0.9;
-            color: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            text-align: center;
-        }
-    </style>
-    <script>
-        "use strict";
-        function registration() {
-            const registerForm = document.getElementById('register-form');
-            if (!(registerForm instanceof HTMLFormElement)) {
-                console.error('Cannot find registration form');
-                return;
-            }
-            const registerFormParentNode = registerForm.parentNode;
-            if (!registerFormParentNode) {
-                console.error('Cannot find registration form parent node');
-                return;
-            }
-            const usernameElement = document.getElementById('username');
-            if (!(usernameElement instanceof HTMLInputElement)) {
-                console.error('Cannot find username input');
-                return;
-            }
-            const passwordElement = document.getElementById('password');
-            if (!(passwordElement instanceof HTMLInputElement)) {
-                console.error('Cannot find password input');
-                return;
-            }
-            registerForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const username = usernameElement.value;
-                const password = passwordElement.value;
-                try {
-                    const response = await fetch('/register', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ username: username, password: password }),
-                    });
-                    if (response.ok) {
-                        const successMessage = document.createElement('div');
-                        successMessage.className = 'success-message';
-                        successMessage.textContent = 'Registration successful! You can now sign in.';
-                        registerFormParentNode.insertBefore(successMessage, registerForm);
-                        usernameElement.value = '';
-                        passwordElement.value = '';
-                    }
-                }
-                catch (error) {
-                    console.error('Error during registration:', error);
-                    alert('Registration failed. Please try again.');
-                }
-            });
-        }
-    </script>
 </head>
 
-<body onload="registration()">
+<body onload="register()">
     <div class="topnav">
         <div class="left-links">
-            <a href="/">Home</a>
-            <a href="/posts">Posts</a>
+            <a href="/">Главная</a>
+            <a href="/posts">Посты</a>
         </div>
 
-        <div class="right-links">
-            <a href="/login">Login</a>
-            <a class="active" href="/register">Register</a>
+        <div class="right-links" id="right-links">
+            <a href="/login">Вход</a>
+            <a class="active" href="/register">Регистрация</a>
         </div>
     </div>
 
     <div class="register-form-container">
-        <form id="register-form" action="/register" method="post">
-            <h1>Register</h1>
-            <p>Please fill this form to sign up.</p>
+        <form id="register-form" action="/api/register" method="post">
+            <h1>Регистрация</h1>
+            <p>Пожалуйста, заполните данные чтобы зарегистрироваться.</p>
             <hr>
 
-            <label for="username"><b>Username</b></label>
-            <input type="text" placeholder="Enter Username" name="username" id="username" required>
+            <label for="username"><b>Логин</b></label>
+            <input type="text" placeholder="Логин" name="username" id="username" required>
 
-            <label for="password"><b>Password</b></label>
-            <input type="password" placeholder="Enter Password" name="password" id="password" required>
+            <label for="password"><b>Пароль</b></label>
+            <input type="password" placeholder="Пароль" name="password" id="password" required>
 
-            <input type="submit" value="Register">
+            <input type="submit" value="Зарегистрироваться">
         </form>
     </div>
 </body>

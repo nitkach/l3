@@ -9,7 +9,7 @@ askama            = { version = "0.12", features = ["with-axum"] }
 askama_axum       = { version = "0.4" }
 axum              = { version = "0.7", features = ["macros", "form"] }
 bcrypt            = { version = "0.16" }
-chrono            = { version = "0.4" }
+chrono            = { version = "0.4", features = ["serde"] }
 deadpool-postgres = { version = "0.14" }
 dotenvy           = { version = "0.15" }
 env_logger        = { version = "0.11" }

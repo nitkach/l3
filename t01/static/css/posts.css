@@ -1,0 +1,158 @@
+.message {
+    font-size: 16px;
+    padding: 5px;
+    text-align: center;
+}
+
+/* --- Posts Container --- */
+.posts-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Create Post Form --- */
+.create-post-form {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.create-post-form h2 {
+    margin-top: 0;
+    font-size: 24px;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+button[type="submit"] {
+    background-color: #ab00ce;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background-color: #8a00b5;
+}
+
+/* --- Posts List --- */
+#posts-list {
+    margin-top: 20px;
+}
+
+.post {
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.post h2 {
+    margin-top: 0;
+    font-size: 22px;
+    color: #333;
+}
+
+.post h2 a {
+    text-decoration: none;
+    color: #333;
+}
+
+.post h2 a:hover {
+    color: #ab00ce;
+}
+
+.post p {
+    margin: 10px 0;
+    font-size: 16px;
+    color: #555;
+    line-height: 1.5;
+}
+
+.post-metadata {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #777;
+}
+
+.post-metadata span {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.likes-section {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.like-button {
+    background-color: #ab00ce;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.like-button:hover {
+    background-color: #8c00a8;
+}
+
+.like-count {
+    font-size: 14px;
+    color: #777;
+}
+
+.delete-button {
+    background-color: #ab00ce;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.delete-button:hover {
+    background-color: #8c00a8;
+}

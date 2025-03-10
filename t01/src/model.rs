@@ -1,7 +1,4 @@
 use serde::{Deserialize, Serialize};
-use ulid::Ulid;
-
-use crate::utils::PasswordHash;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub(crate) struct Claims {
@@ -10,12 +7,12 @@ pub(crate) struct Claims {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct RegisterForm {
+pub(crate) struct RegisterRequest {
     pub(crate) username: String,
     pub(crate) password: String,
 }
 
-impl RegisterForm {
+impl RegisterRequest {
     pub(crate) fn is_empty(&self) -> bool {
         self.username.is_empty() || self.password.is_empty()
     }
@@ -35,5 +32,6 @@ impl LoginRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct CreatePostRequest {
+    pub(crate) title: String,
     pub(crate) content: String,
 }

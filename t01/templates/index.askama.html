@@ -4,30 +4,32 @@
 <head>
     <meta charset="utf-8">
     <title>Home</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <style>
-        .index {
-            font-size: larger;
-            margin: 0 auto;
-            color: #333;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/index.css">
+    <script src="/static/scripts/script.js"></script>
 </head>
 
 <body>
     <div class="topnav">
         <div class="left-links">
-            <a class="active" href="/">Home</a>
-            <a href="/posts">Posts</a>
+            <a class="active" href="/">Главная</a>
+            <a href="/posts">Посты</a>
         </div>
 
-        <div class="right-links">
-            <a href="/login">Login</a>
-            <a href="/register">Register</a>
+        <div class="right-links" id="right-links">
+            <a href="/login">Вход</a>
+            <a href="/register">Регистрация</a>
         </div>
     </div>
 
-    <div class="index">
+    <div class="index-container">
+        <h1>Добро пожаловать!</h1>
+        <p>В этой мини-социальной сети вы можете:</p>
+        <ul>
+            <li><strong>Публиковать посты</strong> — делитесь своими мыслями.</li>
+            <li><strong>Ставить лайки</strong> — поддерживайте посты, которые вам нравятся.</li>
+            <li><strong>Регистрироваться и входить</strong> — создайте аккаунт и присоединяйтесь к сообществу.</li>
+        </ul>
     </div>
 </body>
 

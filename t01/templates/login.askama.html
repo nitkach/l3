@@ -4,132 +4,40 @@
 <head>
     <meta charset="utf-8">
     <title>Login</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <style>
-        * {
-            box-sizing: border-box
-        }
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/login.css">
+    <script src="/static/scripts/login.js"></script>
+    <script src="/static/scripts/script.js"></script>
 
-        .login-forms {
-            font-size: 14px;
-            background-color: #fff;
-            margin: 50px auto;
-            max-width: 400px;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .login-forms h1,
-        p {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        .login-forms label {
-            color: #424242;
-        }
-
-        input[type=text],
-        input[type=password] {
-            width: 100%;
-            padding: 10px;
-
-            margin: 5px 0 20px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-
-            display: inline-block;
-            background: #f1f1f1;
-        }
-
-        input[type=text]:focus,
-        input[type=password]:focus {
-            background-color: #ddd;
-            outline: none;
-        }
-
-        hr {
-            border: 1px solid #f1f1f1;
-            margin-bottom: 25px;
-        }
-
-        .login-forms input[type="submit"] {
-            background-color: #ab00ce;
-            border-radius: 4px;
-            font-size: 16px;
-            color: white;
-            padding: 10px;
-            margin: 8px 0;
-            border: none;
-            cursor: pointer;
-            width: 100%;
-            opacity: 0.9;
-        }
-
-        .login-forms input[type="submit"]:hover {
-            opacity: 1;
-        }
-    </style>
-    <script>
-        document.getElementById('login-forms').addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, password }),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Login failed');
-                }
-
-                const data = await response.json();
-
-                localStorage.setItem('jwt', data.token);
-
-                window.location.href = '/';
-            } catch (error) {
-                console.error('Error during login:', error);
-                alert('Login failed. Please check your credentials.');
-            }
-        });
-    </script>
 </head>
 
-<body>
+<body onload="login()">
     <div class="topnav">
         <div class="left-links">
-            <a href="/">Home</a>
-            <a href="/posts">Posts</a>
+            <a href="/">Главная</a>
+            <a href="/posts">Посты</a>
         </div>
 
-        <div class="right-links">
-            <a class="active" href="/login">Login</a>
-            <a href="/register">Register</a>
+        <div class="right-links" id="right-links">
+            <a class="active" href="/login">Вход</a>
+            <a href="/register">Регистрация</a>
         </div>
     </div>
 
-    <div class="login-forms">
-        <h1>Login</h1>
-        <p>Please fill this form to sign in.</p>
-        <hr>
+    <div class="login-form-container">
+        <form id="login-form">
+            <h1>Вход</h1>
+            <p>Пожалуйста, заполните данные чтобы войти.</p>
+            <hr>
 
-        <label for="username"><b>Username</b></label>
-        <input type="text" placeholder="Enter Username" name="username" id="username" required>
+            <label for="username"><b>Логин</b></label>
+            <input type="text" placeholder="Логин" name="username" id="username" required>
 
-        <label for="password"><b>Password</b></label>
-        <input type="password" placeholder="Enter Password" name="password" id="password" required>
+            <label for="password"><b>Пароль</b></label>
+            <input type="password" placeholder="Пароль" name="password" id="password" required>
 
-        <input type="submit" value="Login">
+            <input id="send-login-data" type="submit" value="Войти">
+        </form>
     </div>
 </body>
 

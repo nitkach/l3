@@ -1,0 +1,134 @@
+body {
+    font-family: monospace;
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+}
+
+/* --- Navigation bar --- */
+
+.topnav {
+    background-color: #333;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.topnav .left-links,
+.topnav .right-links {
+    display: flex;
+}
+
+.topnav a {
+    color: #f2f2f2;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+}
+
+.topnav a:hover {
+    background-color: #ab00ce;
+    color: white;
+    cursor: pointer;
+}
+
+.topnav a.active {
+    background-color: #ab00ce;
+    color: white;
+}
+
+/* --- Posts --- */
+
+.post {
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.post h2 {
+    margin-top: 0;
+    font-size: 22px;
+    color: #333;
+}
+
+.post h2 a {
+    text-decoration: none;
+    color: #333;
+}
+
+.post h2 a:hover {
+    color: #ab00ce;
+}
+
+.post p {
+    margin: 10px 0;
+    font-size: 16px;
+    color: #555;
+    line-height: 1.5;
+}
+
+.post-metadata {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #777;
+}
+
+.post-metadata span {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.likes-section {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.like-button {
+    background-color: #ab00ce;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.like-button:hover {
+    background-color: #8c00a8;
+}
+
+.like-count {
+    font-size: 14px;
+    color: #777;
+}
+
+.delete-button {
+    background-color: #ab00ce;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.delete-button:hover {
+    background-color: #8c00a8;
+}
+
+.error {
+    color: red;
+    font-size: 16px;
+    text-align: center;
+    padding: 10px;
+    background-color: #ffe6e6;
+    border: 1px solid #ffcccc;
+    border-radius: 4px;
+}

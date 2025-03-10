@@ -1,14 +1,10 @@
 use anyhow::Result;
 use log::info;
 use refinery::embed_migrations;
+use serde::Serialize;
 use tokio_postgres::Row;
-use ulid::Ulid;
 
-use crate::{
-    error::AppError,
-    model::{Claims, CreatePostRequest, LoginRequest},
-    utils::PasswordHash,
-};
+use crate::{error::AppError, utils::PasswordHash};
 
 #[derive(Clone)]
 pub(crate) struct Repository {
@@ -42,6 +38,8 @@ impl Repository {
     ) -> Result<i32, AppError> {
         let mut connection = self.pool.get().await?;
 
+        info!("Transaction for register started");
+
         let transaction = connection.transaction().await?;
 
         let check_query = "
@@ -68,6 +66,8 @@ impl Repository {
 
         transaction.commit().await?;
 
+        info!("Transaction for register successfully ended");
+
         Ok(user_id)
     }
 
@@ -75,77 +75,323 @@ impl Repository {
         &self,
         username: &str,
     ) -> Result<Option<DatabaseUser>> {
+        info!("Verifying user credentials");
         let mut connection = self.pool.get().await?;
+
+        info!("Transaction for login credentials started");
 
         let transaction = connection.transaction().await?;
 
         let query = "
-            select (user_id, username, password_hash, created_at)
+            select user_id, username, password_hash, created_at
             from users
             where username = $1;
         ";
         let Some(row) = transaction.query_opt(query, &[&username]).await? else {
+            info!("User not found in database with username: '{username}'");
             return Ok(None);
         };
 
+        info!("User found in database with username: '{username}'");
         let user = DatabaseUser::try_from(row)?;
 
         transaction.commit().await?;
+        info!("Transaction for user credentials successfully ended");
 
         Ok(Some(user))
     }
 
+    pub(crate) async fn get_posts(&self) -> Result<Vec<DatabasePost>> {
+        let mut connection = self.pool.get().await?;
+
+        info!("Transaction for listing posts started");
+
+        let transaction = connection.transaction().await?;
+
+        let query = "
+            select
+                p.post_id,
+                p.user_id,
+                u.username,
+                p.title,
+                p.content,
+                p.created_at,
+                count(l.like_id) as likes_count
+                from posts p
+            join users u on p.user_id = u.user_id
+            left join likes l on p.post_id = l.post_id
+            group by p.post_id, p.user_id, u.username, p.title, p.content, p.created_at
+            order by p.created_at desc;
+        ";
+        let rows = transaction.query(query, &[]).await?;
+
+        let posts = rows
+            .into_iter()
+            .map(DatabasePost::try_from)
+            .collect::<Result<Vec<_>>>()?;
+
+        transaction.commit().await?;
+
+        info!("Transaction for listing posts successfully ended");
+
+        Ok(posts)
+    }
+
+    pub(crate) async fn get_post(&self, post_id: i32) -> Result<Option<DatabasePost>> {
+        let mut connection = self.pool.get().await?;
+
+        info!("Transaction for getting post with id = {post_id} started");
+
+        let transaction = connection.transaction().await?;
+
+        let query = "
+        select
+                p.post_id,
+                p.user_id,
+                u.username,
+                p.title,
+                p.content,
+                p.created_at,
+                count(l.like_id) as likes_count
+                from posts p
+                join users u on p.user_id = u.user_id
+            left join likes l on p.post_id = l.post_id
+            where p.post_id = $1
+            group by p.post_id, p.user_id, u.username, p.title, p.content, p.created_at;
+        ";
+        let row = transaction.query_opt(query, &[&post_id]).await?;
+
+        let post = row.map(DatabasePost::try_from).transpose()?;
+
+        transaction.commit().await?;
+
+        info!("Transaction for getting post with id = {post_id} successfully ended");
+
+        Ok(post)
+    }
+
     pub(crate) async fn create_post(
         &self,
-        post: CreatePostRequest,
-        claims: Claims,
-    ) -> Result<Ulid> {
-        // let conn = self.pool.get().await?;
+        user_id: i32,
+        title: &str,
+        content: &str,
+    ) -> Result<i32> {
+        let mut connection = self.pool.get().await?;
 
-        // let query = "insert into posts (id, user_id, content, likes) values ($1, $2, $3, $4);";
-        // conn.execute(
-        //     query,
-        //     &[&ulid.to_string(), &claims.sub, &post.content, &"0"],
-        // )
-        // .await?;
+        info!("Transaction for creating post by user with id = {user_id} started");
 
-        // Ok(ulid)
-        todo!()
+        let transaction = connection.transaction().await?;
+
+        let query = "
+            insert into posts (user_id, title, content)
+            values ($1, $2, $3)
+            returning post_id;
+        ";
+        let row = transaction
+            .query_one(query, &[&user_id, &title, &content])
+            .await?;
+
+        let post_id: i32 = row.try_get(0)?;
+
+        transaction.commit().await?;
+
+        info!("Transaction for creating post by user with id = {user_id} successfully ended");
+
+        Ok(post_id)
     }
 
-    pub(crate) async fn get_post(&self, ulid: Ulid) -> Result<Option<DatabasePost>> {
-        // let conn = self.pool.get().await?;
+    pub(crate) async fn like_post(&self, user_id: i32, post_id: i32) -> Result<Like> {
+        let mut connection = self.pool.get().await?;
 
-        // let query = "select id, user_id, content, likes from posts where id = $1;";
-        // let Some(row) = conn.query_opt(query, &[&ulid.to_string()]).await? else {
-        //     return Ok(None);
-        // };
+        info!("Transaction for liking/disliking post (id = {post_id}) by user (id = {user_id}) started");
 
-        // let post = DatabasePost::try_from(row)?;
+        let transaction = connection.transaction().await?;
 
-        // Ok(Some(post))
-        todo!()
+        let query = "
+            select like_id
+            from likes
+            where user_id = $1 and post_id = $2;
+        ";
+        let row = transaction.query_opt(query, &[&user_id, &post_id]).await?;
+
+        if row.is_some() {
+            let delete_query = "
+                delete from likes
+                where user_id = $1 and post_id = $2;
+            ";
+            transaction
+                .execute(delete_query, &[&user_id, &post_id])
+                .await?;
+            transaction.commit().await?;
+
+            info!("Transaction for liking/disliking post (id = {post_id}) by user (id = {user_id}) successfully ended");
+
+            Ok(Like::Removed)
+        } else {
+            let insert_query = "
+                insert into likes (user_id, post_id)
+                values ($1, $2);
+            ";
+            transaction
+                .execute(insert_query, &[&user_id, &post_id])
+                .await?;
+
+            transaction.commit().await?;
+
+            info!("Transaction for liking/disliking post (id = {post_id}) by user (id = {user_id}) successfully ended");
+
+            Ok(Like::Added)
+        }
     }
 
-    pub(crate) async fn delete_post(&self, post_id: Ulid, claims: Claims) -> Result<bool> {
-        // let conn = self.pool.get().await?;
+    pub(crate) async fn get_like_count(&self, post_id: i32) -> Result<i64> {
+        let mut connection = self.pool.get().await?;
 
-        // let query = "delete from posts where id = $1 and user_id = $2;";
-        // let rows_deleted = conn.execute(query, &[&post_id, &claims.sub]).await?;
+        info!("Transaction for obtaining likes count for post (id = {post_id}) started");
 
-        // Ok(rows_deleted == 1)
-        todo!()
+        let transaction = connection.transaction().await?;
+
+        let query = "
+            select count(*)
+            from likes
+            where post_id = $1;
+        ";
+
+        let row = transaction.query_one(query, &[&post_id]).await?;
+
+        let likes_count: i64 = row.try_get(0)?;
+
+        transaction.commit().await?;
+
+        info!("Transaction for obtaining likes count for post (id = {post_id}) successfully ended");
+
+        Ok(likes_count)
     }
 
-    pub(crate) async fn like_post(&self, post_id: Ulid) -> Result<bool> {
-        // let conn = self.pool.get().await?;
+    pub(crate) async fn delete_post(&self, post_id: i32, user_id: i32) -> Result<PostDeleteResult> {
+        let mut connection = self.pool.get().await?;
 
-        // let query = "update posts set likes = likes + 1 where id = $1;";
-        // let rows_updated = conn.execute(query, &[&post_id]).await?;
+        info!("Transaction for deleting post (id = {post_id}) by user (id = {user_id}) started");
 
-        // Ok(rows_updated == 1)
-        todo!()
+        let transaction = connection.transaction().await?;
+
+        let query = "
+            select user_id
+            from posts
+            where post_id=$1;
+        ";
+        let row = transaction.query_opt(query, &[&post_id]).await?;
+        let rows_owned = match row {
+            Some(row) => {
+                let post_user_id: i32 = row.try_get("user_id")?;
+                if post_user_id == user_id {
+                    1 // post exists and is owned by the user
+                } else {
+                    0 // post exists but is not owned by the user
+                }
+            }
+            None => 0, // post does not exist
+        };
+
+        let query = "
+            delete from posts
+            where post_id=$1 and user_id=$2
+            returning post_id;
+        ";
+        let row = transaction.query_opt(query, &[&post_id, &user_id]).await?;
+        let rows_deleted = match row {
+            Some(_) => 1, // Post was deleted
+            None => 0,    // Post was not deleted
+        };
+
+        let delete_result = match (rows_owned, rows_deleted) {
+            (0, 0) => PostDeleteResult::NotFound,
+            (0, 1) => unreachable!("Wrong state: post is not found, but was deleted"),
+            (1, 0) => PostDeleteResult::NotOwned,
+            (1, 1) => PostDeleteResult::Deleted,
+            (_, _) => unreachable!(),
+        };
+
+        transaction.commit().await?;
+
+        info!("Transaction for deleting post (id = {post_id}) by user (id = {user_id}) successfully ended");
+
+        Ok(delete_result)
     }
+
+    pub(crate) async fn get_user_posts(&self, user_id: i32) -> Result<Vec<DatabasePost>> {
+        let mut connection = self.pool.get().await?;
+
+        info!("Transaction for listing user posts started");
+
+        let transaction = connection.transaction().await?;
+
+        let query = "
+            select
+                p.post_id,
+                p.user_id,
+                u.username,
+                p.title,
+                p.content,
+                p.created_at,
+                count(l.like_id) as likes_count
+                from posts p
+            join users u on p.user_id = u.user_id
+            left join likes l on p.post_id = l.post_id
+            where p.user_id = $1
+            group by p.post_id, p.user_id, u.username, p.title, p.content, p.created_at
+            order by p.created_at desc;
+        ";
+        let rows = transaction.query(query, &[&user_id]).await?;
+
+        let posts = rows
+            .into_iter()
+            .map(DatabasePost::try_from)
+            .collect::<Result<Vec<_>>>()?;
+
+        transaction.commit().await?;
+
+        info!("Transaction for listing user posts successfully ended");
+
+        Ok(posts)
+    }
+
+    pub(crate) async fn get_username_by_user_id(&self, user_id: i32) -> Result<Option<String>> {
+        let mut connection = self.pool.get().await?;
+
+        info!("Transaction for listing user posts started");
+
+        let transaction = connection.transaction().await?;
+
+        let query = "
+            select username
+            from users
+            where user_id = $1;
+        ";
+        let Some(row) = transaction.query_opt(query, &[&user_id]).await? else {
+            return Ok(None);
+        };
+
+        let username: String = row.try_get("username")?;
+
+        transaction.commit().await?;
+
+        info!("Transaction for listing user posts successfully ended");
+
+        Ok(Some(username))
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) enum Like {
+    Added,
+    Removed,
+}
+
+pub(crate) enum PostDeleteResult {
+    Deleted,
+    NotFound,
+    NotOwned,
 }
 
 #[derive(Debug)]
@@ -169,23 +415,29 @@ impl TryFrom<Row> for DatabaseUser {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub(crate) struct DatabasePost {
-    pub(crate) id: Ulid,
-    pub(crate) user_id: Ulid,
+    pub(crate) post_id: i32,
+    pub(crate) user_id: i32,
+    pub(crate) username: String,
+    pub(crate) title: String,
     pub(crate) content: String,
-    pub(crate) likes: u32,
+    pub(crate) created_at: chrono::NaiveDateTime,
+    pub(crate) likes_count: i64,
 }
 
 impl TryFrom<Row> for DatabasePost {
     type Error = anyhow::Error;
 
-    fn try_from(row: Row) -> std::result::Result<Self, Self::Error> {
+    fn try_from(row: Row) -> Result<Self> {
         Ok(Self {
-            id: row.try_get("id")?,
+            post_id: row.try_get("post_id")?,
             user_id: row.try_get("user_id")?,
+            username: row.try_get("username")?,
+            title: row.try_get("title")?,
             content: row.try_get("content")?,
-            likes: row.try_get("likes")?,
+            created_at: row.try_get("created_at")?,
+            likes_count: row.try_get("likes_count")?,
         })
     }
 }

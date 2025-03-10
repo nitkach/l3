@@ -1,6 +1,6 @@
 services:
-  t01:
-    image: t01
+  mini_social_network:
+    image: mini_social_network
 
     build: .
 
@@ -18,7 +18,7 @@ services:
     image: postgres:17
 
     volumes:
-      - t01:/var/lib/postgresql/data
+      - mini_social_network_data:/var/lib/postgresql/data
 
     environment:
       POSTGRES_DB: ${PGDATABASE}
@@ -31,7 +31,7 @@ services:
     ports:
       - "5432:5432"
 volumes:
-  t01:
+  mini_social_network_data:
 
 networks:
   postgres:

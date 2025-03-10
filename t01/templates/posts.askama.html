@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Posts</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/posts.css">
+    <script src="/static/scripts/posts.js"></script>
+    <script src="/static/scripts/script.js"></script>
+</head>
+
+<body>
+    <div class="topnav">
+        <div class="left-links">
+            <a href="/">Главная</a>
+            <a class="active" href="/posts">Посты</a>
+        </div>
+
+        <div class="right-links" id="right-links">
+            <a href="/login">Вход</a>
+            <a href="/register">Регистрация</a>
+        </div>
+    </div>
+
+    <div class="posts-container" id="posts-container">
+        <div id="create-post-form" class="create-post-form" style="display: none;">
+            <h2>Опубликовать новый пост</h2>
+            <form id="post-form">
+                <div class="form-group">
+                    <label for="title">Название</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="content">Содержимое</label>
+                    <textarea id="content" name="content" rows="5" required></textarea>
+                </div>
+                <button type="submit">Опубликовать пост</button>
+            </form>
+        </div>
+
+        <div id="posts-list"></div>
+    </div>
+</body>
+
+</html>
